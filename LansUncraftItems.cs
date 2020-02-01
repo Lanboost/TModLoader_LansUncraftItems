@@ -334,13 +334,10 @@ namespace LansUncraftItems
 
 		public void OpenRecipeGUI() => recipeUI.SetState(recipeGUI);
 
-		public void CloseRecipeGUI(bool success)
+		public void CloseRecipeGUI()
 		{
-			if (!success)
-			{
-				Main.LocalPlayer.QuickSpawnClonedItem(
-					recipeGUI.item, recipeGUI.item.stack);
-			}
+			Main.LocalPlayer.QuickSpawnClonedItem(
+				recipeGUI.item, recipeGUI.item.stack);
 			recipeUI.SetState(null);
 		}
 	}

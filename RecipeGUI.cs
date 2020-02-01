@@ -70,7 +70,7 @@ namespace LansUncraftItems
 
         private void CloseButton_OnClick(UIMouseEvent evt, UIElement listeningElement)
         {
-            LansUncraftItems.instance.CloseRecipeGUI(false);
+            LansUncraftItems.instance.CloseRecipeGUI();
         }
 
         private void DragEnd(UIMouseEvent evt, UIElement listeningElement)
@@ -154,8 +154,7 @@ namespace LansUncraftItems
                             break;
                     }
                         
-                    LansUncraftItems.instance.CloseRecipeGUI(
-                        result == UncraftResult.Success);
+                    LansUncraftItems.instance.CloseRecipeGUI();
                 };
                 panel.Append(btn);
                 recipeList.Add(panel);
