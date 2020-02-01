@@ -283,7 +283,14 @@ namespace LansUncraftItems
 
 			if (foundRecipes.Count == 1)
 			{
-				UncraftItem(item, foundRecipes[0], all);
+				bool success = UncraftItem(item, foundRecipes[0], all);
+
+				Recipe.FindRecipes();
+
+				if(!success)
+				{
+					Main.NewText("Not enough items in stack for this uncraft recipe.", new Color(255, 0, 0));
+				}
 			}
 			else if (foundRecipes.Count > 1)
 			{
