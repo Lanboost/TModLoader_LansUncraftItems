@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using Terraria;
 using Terraria.GameContent.UI.Elements;
+using Terraria.ModLoader.UI.Elements;
 using Terraria.UI;
 
 namespace LansUncraftItems
@@ -17,7 +18,7 @@ namespace LansUncraftItems
         private Vector2 offset;
 
         private UIPanel rootPanel;
-        internal UIList recipeList;
+        internal UIGrid recipeList;
 
         internal Item item;
         internal static List<Recipe> currentRecipes;
@@ -41,7 +42,6 @@ namespace LansUncraftItems
             rootPanel.SetPadding(vpadding);
             Append(rootPanel);
 
-            // TODO: Prompt for shift key
             UIText prompt = new UIText(
                 $"Choose a recipe (mouseover for more details)" +
                 $"{System.Environment.NewLine}Shift-click to uncraft stack",
@@ -57,8 +57,8 @@ namespace LansUncraftItems
             closeButton.Top.Set(closeButton.Height.Pixels / 2f, 0f);
             rootPanel.Append(closeButton);
 
-            recipeList = new UIList();
-            recipeList.Width.Set(400f, 0f);
+            recipeList = new UIGrid();
+            recipeList.Width.Set(500f, 0f);
             recipeList.Height.Set(rootPanel.Height.Pixels - prompt.Height.Pixels - vpadding, 0f);
             recipeList.Left.Set(0f, 0f);
             recipeList.Top.Set(vpadding * 6f, 0f);
@@ -91,8 +91,8 @@ namespace LansUncraftItems
 
         public void ListRecipes(Item item, List<Recipe> recipes)
         {
-            // Item can't be deleted in callback, so kill it now and spawn
-            // a total clone if unsuccessful
+            // Item can't be deleted in callback, so destroy it now 
+            // and spawn a total clone if unsuccessful
             this.item = item.Clone();
             item.TurnToAir();
             recipeList.Clear();
@@ -100,10 +100,19 @@ namespace LansUncraftItems
             foreach (Recipe recipe in recipes)
             {
                 UIRecipePanel panel = new UIRecipePanel(recipe);
-                panel.Width.Set(50, 0);
-                panel.Height.Set(50, 0);
+                panel.Width.Set(60f, 0f);
+                panel.Height.Set(60f, 0f);
+                panel.SetPadding(0);
                 Texture2D tex = Main.itemTexture[recipe.requiredItem[0].type];
-                UIImageButton btn = new UIImageButton(tex);
+                // Push larger sprites further into upper-left corner
+                float 
+                    offsetX = MathHelper.Clamp(tex.Width * .001f, 0f, .5f),
+                    offsetY = MathHelper.Clamp(tex.Height * .001f, 0f, .5f);
+                UIImageButton btn = new UIImageButton(tex)
+                {
+                    HAlign = 0.5f - offsetX,
+                    VAlign = 0.5f - offsetY
+                };
                 panel.OnClick += delegate
                 {
                     bool shift = false;
