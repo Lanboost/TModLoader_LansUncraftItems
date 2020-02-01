@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using Terraria;
 using Terraria.GameContent.UI.Elements;
+using Terraria.ID;
 using Terraria.ModLoader.UI.Elements;
 using Terraria.UI;
 
@@ -142,6 +143,8 @@ namespace LansUncraftItems
                             "Not enough items in stack for this uncraft recipe.",
                             new Color(255, 0, 0));
                     }
+                    else
+                        Main.PlaySound(SoundID.Grab);
                     LansUncraftItems.instance.CloseRecipeGUI(success);
                 };
                 panel.Append(btn);
