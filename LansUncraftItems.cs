@@ -28,6 +28,12 @@ namespace LansUncraftItems
 		}
 	}
 
+	public enum UncraftResult : byte
+	{
+		Success,
+		Full,
+		NotEnoughItems
+	}
 
 	public class LansUncraftItems : Mod
 	{
@@ -194,7 +200,7 @@ namespace LansUncraftItems
 			return true;
 		}
 
-		private bool UncraftItem(Item item, Recipe recipe)
+		private UncraftResult UncraftItem(Item item, Recipe recipe)
 		{
 			if(item.type == recipe.createItem.type && item.stack >= recipe.createItem.stack)
 			{
@@ -216,7 +222,7 @@ namespace LansUncraftItems
 					if (!inventoryWrapper.AddItem(reqItem))
 					{
 						inventoryWrapper.Restore();
-						return false;
+						return UncraftResult.Full;
 					}
 				}
 
@@ -229,20 +235,25 @@ namespace LansUncraftItems
 					item.TurnToAir();
 				}
 
-				return true;
+				return UncraftResult.Success;
 			}
-			return false;
+			return UncraftResult.NotEnoughItems;
 		}
 
-		public bool UncraftItem(Item item, Recipe recipe, bool all) {
-			if(all)
+		public UncraftResult UncraftItem(Item item, Recipe recipe, bool all) {
+			if (all)
 			{
 				int count = 0;
-				while(UncraftItem(item, recipe))
+				UncraftResult result = UncraftItem(item, recipe);
+				while (result == UncraftResult.Success)
 				{
 					count++;
+					result = UncraftItem(item, recipe);
 				}
-				return count > 0;
+				if (count > 0)
+					return UncraftResult.Success;
+				else
+					return result;
 			}
 			else
 			{
@@ -283,13 +294,24 @@ namespace LansUncraftItems
 
 			if (foundRecipes.Count == 1)
 			{
-				bool success = UncraftItem(item, foundRecipes[0], all);
+				UncraftResult result = UncraftItem(item, foundRecipes[0], all);
 
 				Recipe.FindRecipes();
 
-				if(!success)
+				switch (result)
 				{
-					Main.NewText("Not enough items in stack for this uncraft recipe.", new Color(255, 0, 0));
+					case UncraftResult.Success:
+						break;
+					case UncraftResult.NotEnoughItems:
+						Main.NewText(
+							"Not enough items in stack for this uncraft recipe.",
+							new Color(255, 0, 0));
+						break;
+					case UncraftResult.Full:
+						Main.NewText(
+							"Not enough space in inventory to return ingredients.",
+							new Color(255, 0, 0));
+						break;
 				}
 			}
 			else if (foundRecipes.Count > 1)

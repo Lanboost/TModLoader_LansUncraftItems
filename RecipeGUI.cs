@@ -133,19 +133,29 @@ namespace LansUncraftItems
                         all = true;
                     }
 
-                    bool success = LansUncraftItems.instance.UncraftItem(this.item, recipe, all);
+                    UncraftResult result = LansUncraftItems.instance.UncraftItem(this.item, recipe, all);
 
                     Recipe.FindRecipes();
 
-                    if (!success)
+                    switch (result)
                     {
-                        Main.NewText(
-                            "Not enough items in stack for this uncraft recipe.",
-                            new Color(255, 0, 0));
+                        case UncraftResult.Success:
+                            Main.PlaySound(SoundID.Grab);
+                            break;
+                        case UncraftResult.NotEnoughItems:
+                            Main.NewText(
+                                "Not enough items in stack for this uncraft recipe.",
+                                new Color(255, 0, 0));
+                            break;
+                        case UncraftResult.Full:
+                            Main.NewText(
+                                "Not enough space in inventory to return ingredients.",
+                                new Color(255, 0, 0));
+                            break;
                     }
-                    else
-                        Main.PlaySound(SoundID.Grab);
-                    LansUncraftItems.instance.CloseRecipeGUI(success);
+                        
+                    LansUncraftItems.instance.CloseRecipeGUI(
+                        result == UncraftResult.Success);
                 };
                 panel.Append(btn);
                 recipeList.Add(panel);
