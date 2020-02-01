@@ -43,7 +43,8 @@ namespace LansUncraftItems
 
             // TODO: Prompt for shift key
             UIText prompt = new UIText(
-                "Choose a recipe (mouseover for more details)",
+                $"Choose a recipe (mouseover for more details)" +
+                $"{System.Environment.NewLine}Shift-click to uncraft stack",
                 1f, false);
             rootPanel.Append(prompt);
 
@@ -60,7 +61,7 @@ namespace LansUncraftItems
             recipeList.Width.Set(400f, 0f);
             recipeList.Height.Set(rootPanel.Height.Pixels - prompt.Height.Pixels - vpadding, 0f);
             recipeList.Left.Set(0f, 0f);
-            recipeList.Top.Set(vpadding * 2f, 0f);
+            recipeList.Top.Set(vpadding * 6f, 0f);
             recipeList.SetPadding(0);
             recipeList.Initialize();
             rootPanel.Append(recipeList);
