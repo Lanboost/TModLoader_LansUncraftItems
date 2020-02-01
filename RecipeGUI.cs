@@ -24,9 +24,10 @@ namespace LansUncraftItems
 
         internal RecipeGUI()
         {
-            base.SetPadding(vpadding);
-            base.Width.Set(vwidth, 0f);
-            base.Height.Set(vheight, 0f);
+            SetPadding(vpadding);
+            Width.Set(vwidth, 0f);
+            Height.Set(vheight, 0f);
+            HAlign = VAlign = 0.5f;
         }
 
         public override void OnInitialize()
@@ -40,6 +41,12 @@ namespace LansUncraftItems
             rootPanel.SetPadding(vpadding);
             Append(rootPanel);
 
+            // TODO: Prompt for shift key
+            UIText prompt = new UIText(
+                "Choose a recipe (mouseover for more details)",
+                1f, false);
+            rootPanel.Append(prompt);
+
             UIImageButton closeButton = new UIImageButton(
                 LansUncraftItems.instance.GetTexture("closeButton"));
             closeButton.OnClick += CloseButton_OnClick;
@@ -51,9 +58,9 @@ namespace LansUncraftItems
 
             recipeList = new UIList();
             recipeList.Width.Set(400f, 0f);
-            recipeList.Height.Set(400f, 0f);
+            recipeList.Height.Set(rootPanel.Height.Pixels - prompt.Height.Pixels - vpadding, 0f);
             recipeList.Left.Set(0f, 0f);
-            recipeList.Top.Set(0f, 0f);
+            recipeList.Top.Set(vpadding * 2f, 0f);
             recipeList.SetPadding(0);
             recipeList.Initialize();
             rootPanel.Append(recipeList);
@@ -83,18 +90,20 @@ namespace LansUncraftItems
 
         public void ListRecipes(Item item, List<Recipe> recipes)
         {
+            // Item can't be deleted in callback, so kill it now and spawn
+            // a total clone if unsuccessful
             this.item = item.Clone();
             item.TurnToAir();
             recipeList.Clear();
 
             foreach (Recipe recipe in recipes)
             {
-                UIPanel panel = new UIPanel();
+                UIRecipePanel panel = new UIRecipePanel(recipe);
                 panel.Width.Set(50, 0);
                 panel.Height.Set(50, 0);
                 Texture2D tex = Main.itemTexture[recipe.requiredItem[0].type];
                 UIImageButton btn = new UIImageButton(tex);
-                btn.OnClick += delegate
+                panel.OnClick += delegate
                 {
                     bool shift = false;
                     Keys[] pressedKeys = Main.keyState.GetPressedKeys();
@@ -128,6 +137,30 @@ namespace LansUncraftItems
                 panel.Append(btn);
                 recipeList.Add(panel);
             }
+        }
+    }
+
+    internal sealed class UIRecipePanel : UIPanel
+    {
+        private readonly string tooltip;
+
+        public UIRecipePanel(Recipe recipe)
+        {
+            foreach (Item item in recipe.requiredItem)
+            {
+                if (item.IsAir)
+                    continue;
+
+                tooltip += $"{item.HoverName} {System.Environment.NewLine}";
+            }
+        }
+
+        protected override void DrawSelf(SpriteBatch spriteBatch)
+        {
+            base.DrawSelf(spriteBatch);
+
+            if (IsMouseHovering)
+                Main.hoverItemName = tooltip;
         }
     }
 }
