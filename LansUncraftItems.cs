@@ -281,7 +281,11 @@ namespace LansUncraftItems
 				}
 			}
 
-			if (foundRecipes.Count > 0)
+			if (foundRecipes.Count == 1)
+			{
+				UncraftItem(item, foundRecipes[0], all);
+			}
+			else if (foundRecipes.Count > 1)
 			{
 				OpenRecipeGUI();
 				recipeGUI.ListRecipes(item, foundRecipes);
