@@ -49,13 +49,19 @@ namespace LansUncraftItems
                 1f, false);
             rootPanel.Append(prompt);
 
-            UIImageButton closeButton = new UIImageButton(
-                LansUncraftItems.instance.GetTexture("closeButton"));
+            UIPanel closeButton = new UIPanel();
+            UIText x = new UIText("X")
+            {
+                HAlign = 0.5f,
+                VAlign = 0.5f
+            };
+            closeButton.Append(x);
             closeButton.OnClick += CloseButton_OnClick;
-            closeButton.Width.Set(20f, 0f);
-            closeButton.Height.Set(20f, 0f);
+            closeButton.Width.Set(30f, 0f);
+            closeButton.Height.Set(30f, 0f);
             closeButton.Left.Set(rootPanel.Width.Pixels - closeButton.Width.Pixels * 2 - vpadding * 4.75f, 0f);
             closeButton.Top.Set(closeButton.Height.Pixels / 2f, 0f);
+            closeButton.SetPadding(0f);
             rootPanel.Append(closeButton);
 
             recipeList = new UIGrid();
