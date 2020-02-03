@@ -1,18 +1,10 @@
+using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
 using Terraria;
 using Terraria.ModLoader;
-using MonoMod.Cil;
-using static Mono.Cecil.Cil.OpCodes;
-using System.Reflection;
-using Mono.Cecil;
-using Terraria.Localization;
-using System;
-using Terraria.ID;
-using Terraria.GameInput;
 using Terraria.UI;
-using System.Collections.Generic;
-using Microsoft.Xna.Framework;
 using static Terraria.ModLoader.ModContent;
-
 
 namespace LansUncraftItems
 {
@@ -36,16 +28,23 @@ namespace LansUncraftItems
 		}
 	}
 
+	public enum UncraftResult : byte
+	{
+		Success,
+		Full,
+		NotEnoughItems
+	}
 
 	public class LansUncraftItems : Mod
 	{
-
 		PlayerInventoryWrapper inventoryWrapper = new PlayerInventoryWrapper();
 
 		public static LansUncraftItems instance;
 
 		internal Panel uncraftPanel;
 		public UserInterface uncraftPanelInterface;
+		internal RecipeGUI recipeGUI;
+		public UserInterface recipeUI;
 
 		Random random = new Random();
 
@@ -66,10 +65,13 @@ namespace LansUncraftItems
 				uncraftPanel.Initialize();
 				uncraftPanelInterface = new UserInterface();
 				uncraftPanelInterface.SetState(uncraftPanel);
+
+				recipeGUI = new RecipeGUI();
+				recipeGUI.Initialize();
+				recipeGUI.Activate();
+				recipeUI = new UserInterface();
 			}
 		}
-
-		
 
 		public override void Unload()
 		{
@@ -164,13 +166,13 @@ namespace LansUncraftItems
 			}
 		}
 
-
 		public override void UpdateUI(GameTime gameTime)
 		{
 			// it will only draw if the player is not on the main menu
 			if (Main.playerInventory)
 			{
 				uncraftPanelInterface?.Update(gameTime);
+				recipeUI?.Update(gameTime);
 			}
 		}
 
@@ -179,7 +181,10 @@ namespace LansUncraftItems
 			int mouseTextIndex = layers.FindIndex(layer => layer.Name.Equals("Vanilla: Mouse Text"));
 			if (mouseTextIndex != -1)
 			{
-				layers.Insert(mouseTextIndex, new LegacyGameInterfaceLayer("UncraftPanelLayer", DrawSomethingUI, InterfaceScaleType.UI));
+				layers.Insert(mouseTextIndex, new LegacyGameInterfaceLayer(
+					"UncraftPanelLayer", DrawSomethingUI, InterfaceScaleType.UI));
+				layers.Insert(mouseTextIndex, new LegacyGameInterfaceLayer(
+					"RecipeGUILayer", DrawSomethingUI, InterfaceScaleType.UI));
 			}
 		}
 
@@ -189,16 +194,18 @@ namespace LansUncraftItems
 			if (Main.playerInventory)
 			{
 				uncraftPanelInterface.Draw(Main.spriteBatch, new GameTime());
+				recipeUI.Draw(Main.spriteBatch, new GameTime());
 			}
+
 			return true;
 		}
 
-		private bool uncraftItem(Item item, Recipe recipe)
+		private UncraftResult UncraftItem(Item item, Recipe recipe)
 		{
 			if(item.type == recipe.createItem.type && item.stack >= recipe.createItem.stack)
 			{
 				inventoryWrapper.StartBatch();
-
+				
 				//success = inventoryWrapper.RemoveItem(item.type, 1);
 				foreach (var required in recipe.requiredItem)
 				{
@@ -215,7 +222,7 @@ namespace LansUncraftItems
 					if (!inventoryWrapper.AddItem(reqItem))
 					{
 						inventoryWrapper.Restore();
-						return false;
+						return UncraftResult.Full;
 					}
 				}
 
@@ -227,32 +234,38 @@ namespace LansUncraftItems
 				{
 					item.TurnToAir();
 				}
-				return true;
+
+				return UncraftResult.Success;
 			}
-			return false;
+			return UncraftResult.NotEnoughItems;
 		}
 
-		private bool uncraftItem(Item item, Recipe recipe, bool all) {
-			if(all)
+		public UncraftResult UncraftItem(Item item, Recipe recipe, bool all) {
+			if (all)
 			{
 				int count = 0;
-				while(uncraftItem(item, recipe))
+				UncraftResult result = UncraftItem(item, recipe);
+				while (result == UncraftResult.Success)
 				{
 					count++;
+					result = UncraftItem(item, recipe);
 				}
-				return count > 0;
+				if (count > 0)
+					return UncraftResult.Success;
+				else
+					return result;
 			}
 			else
 			{
-				return uncraftItem(item, recipe);
+				return UncraftItem(item, recipe);
 			}
 		}
 
-		public void uncraftItem(Item item, bool all)
+		public void UncraftItem(Item item, bool all)
 		{
 			List<Recipe> foundRecipes = new List<Recipe>();
 			List<Recipe> foundBlockedRecipes = new List<Recipe>();
-			for (int i=0; i<Main.recipe.Length; i++)
+			for (int i = 0; i < Main.recipe.Length; i++)
 			{
 				if (Main.recipe[i] != null)
 				{
@@ -279,26 +292,36 @@ namespace LansUncraftItems
 				}
 			}
 
-			if(foundRecipes.Count > 0)
+			if (foundRecipes.Count == 1)
 			{
-				if(foundRecipes.Count > 1)
-				{
-					Main.NewText("Multiple uncraft recipes found, first one found is used for now...", new Color(255, 0, 0));
-				}
-
-				bool success = uncraftItem(item, foundRecipes[0], all);
+				UncraftResult result = UncraftItem(item, foundRecipes[0], all);
 
 				Recipe.FindRecipes();
 
-				if(!success)
+				switch (result)
 				{
-					Main.NewText("Not enough items in stack for this uncraft recipe.", new Color(255, 0, 0));
+					case UncraftResult.Success:
+						break;
+					case UncraftResult.NotEnoughItems:
+						Main.NewText(
+							"Not enough items in stack for this uncraft recipe.",
+							new Color(255, 0, 0));
+						break;
+					case UncraftResult.Full:
+						Main.NewText(
+							"Not enough space in inventory to return ingredients.",
+							new Color(255, 0, 0));
+						break;
 				}
-
+			}
+			else if (foundRecipes.Count > 1)
+			{
+				OpenRecipeGUI();
+				recipeGUI.ListRecipes(item, foundRecipes);
 			}
 			else
 			{
-				if(foundBlockedRecipes.Count > 0)
+				if (foundBlockedRecipes.Count > 0)
 				{
 					Main.NewText("Uncraft recipe for this item has been disabled.", new Color(255, 0, 0));
 				}
@@ -309,7 +332,14 @@ namespace LansUncraftItems
 			}
 		}
 
-		
+		public void OpenRecipeGUI() => recipeUI.SetState(recipeGUI);
+
+		public void CloseRecipeGUI()
+		{
+			Main.LocalPlayer.QuickSpawnClonedItem(
+				recipeGUI.item, recipeGUI.item.stack);
+			recipeUI.SetState(null);
+		}
 	}
 
 	public class PlayerInventoryWrapper
@@ -334,7 +364,6 @@ namespace LansUncraftItems
 
 		public bool RemoveItem(int type, int count = 1)
 		{
-
 			for (int k = 0; k < 50; k++)
 			{
 				if (Main.LocalPlayer.inventory[k].type == type)
@@ -352,8 +381,6 @@ namespace LansUncraftItems
 					}
 				}
 			}
-
-
 			return false;
 		}
 
@@ -390,7 +417,6 @@ namespace LansUncraftItems
 					return true;
 				}
 			}
-
 
 			return false;
 		}

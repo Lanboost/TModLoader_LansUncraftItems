@@ -1,5 +1,4 @@
-﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
+﻿using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Terraria;
 using Terraria.GameContent.UI.Elements;
@@ -20,11 +19,7 @@ namespace LansUncraftItems
 
 		public override void OnInitialize()
 		{
-
-
 			texture = ModContent.GetTexture("LansUncraftItems/uncraft");
-
-
 			panel = new UIImageButton(texture);
 
 			panel.Left.Set(560, 0);
@@ -62,8 +57,7 @@ namespace LansUncraftItems
 						all = true;
 					}
 
-					LansUncraftItems.instance.uncraftItem(Main.mouseItem, all);
-					
+					LansUncraftItems.instance.UncraftItem(Main.mouseItem, all);
 				}
 			}
 		}
