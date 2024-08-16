@@ -21,7 +21,6 @@ namespace LansUncraftItems
 		public override void OnInitialize()
 		{
 
-
 			texture = ModContent.GetTexture("LansUncraftItems/uncraft");
 
 

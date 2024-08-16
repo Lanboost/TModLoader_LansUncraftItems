@@ -12,6 +12,10 @@ using Terraria.UI;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using static Terraria.ModLoader.ModContent;
+using System.Diagnostics;
+using Terraria.GameContent.UI.Elements;
+using System.Drawing.Text;
+using Microsoft.Xna.Framework.Input;
 
 
 namespace LansUncraftItems
@@ -26,6 +30,9 @@ namespace LansUncraftItems
 		internal Panel uncraftPanel;
 		public UserInterface uncraftPanelInterface;
 
+		internal recipepanel recipePanel;
+		public UserInterface recipePanelInterface;
+
 		Random random = new Random();
 
 		public UnlimitedBuffLimit()
@@ -39,10 +46,16 @@ namespace LansUncraftItems
 			// the server can't see UI, can it? it's just a command prompt
 			if (!Main.dedServ)
 			{
+				
 				uncraftPanel = new Panel();
 				uncraftPanel.Initialize();
 				uncraftPanelInterface = new UserInterface();
 				uncraftPanelInterface.SetState(uncraftPanel);
+
+				recipePanel = new recipepanel();
+				recipePanel.Initialize();
+				recipePanelInterface = new UserInterface();
+				recipePanelInterface.SetState(recipePanel);
 			}
 		}
 
@@ -58,6 +71,8 @@ namespace LansUncraftItems
 			if (Main.playerInventory)
 			{
 				uncraftPanelInterface?.Update(gameTime);
+
+				recipePanelInterface?.Update(gameTime);
 			}
 		}
 
@@ -68,6 +83,18 @@ namespace LansUncraftItems
 			{
 				layers.Insert(mouseTextIndex, new LegacyGameInterfaceLayer("UncraftPanelLayer", DrawSomethingUI, InterfaceScaleType.UI));
 			}
+
+			layers.Insert(mouseTextIndex, new LegacyGameInterfaceLayer("RecipePanelLayer", DrawRecipeUI, InterfaceScaleType.UI));
+		}
+
+		private bool DrawRecipeUI()
+		{
+			if (Main.playerInventory)
+			{
+				recipePanelInterface.Draw(Main.spriteBatch, new GameTime());
+				
+			}
+			return true;
 		}
 
 		private bool DrawSomethingUI()
@@ -108,11 +135,11 @@ namespace LansUncraftItems
 
 				if (item.stack > recipe.createItem.stack)
 				{
-					item.stack -= recipe.createItem.stack;
+					Main.mouseItem.stack -= recipe.createItem.stack;
 				}
 				else
 				{
-					item.TurnToAir();
+					Main.mouseItem.TurnToAir();
 				}
 				return true;
 			}
@@ -156,7 +183,37 @@ namespace LansUncraftItems
 					Main.NewText("Multiple uncraft recipes found, first one found is used for now...", new Color(255, 0, 0));
 				}
 
-				bool success = uncraftItem(item, foundRecipes[0], all);
+				/*for (int i = 0; i < foundRecipes.Count; i++)
+				{
+					
+					foreach (var ii in foundRecipes[i].requiredItem)
+					{
+						if (ii.Name == "" || ii.netID == 0)
+						{
+							continue;
+						}
+						Debug.WriteLine(ii);
+						Main.NewText(i + ": [I/s" + ii.stack + ":" + ii.netID + "]");
+						//recipePanel.recipes.SetText(i + ": [I/s" + ii.stack + ":" + ii.netID + "]");
+						
+					}
+				}*/
+
+				recipePanel.AddRecipes(foundRecipes);
+
+				foreach (TextButton index in recipePanel.indexes)
+				{
+                    index.Uncraft += Index_Uncraft;
+				}
+
+                bool success = false;
+
+                /*void Index_Uncraft(UIMouseEvent evt, UIElement parent, TextButton obj, EventArgs e)
+                {
+					success = uncraftItem(item, foundRecipes[int.Parse(obj.Text)], all);
+				}*/
+
+                //bool success = uncraftItem(item, foundRecipes[0], all);
 
 				Recipe.FindRecipes();
 
@@ -172,8 +229,83 @@ namespace LansUncraftItems
 			}
 		}
 
-		
-	}
+		public void Index_Uncraft(UIMouseEvent evt, UIElement parent, TextButton obj, Recipe recipe, Item item, EventArgs e)
+		{
+            bool shift = false;
+            Keys[] pressedKeys = Main.keyState.GetPressedKeys();
+            for (int i = 0; i < pressedKeys.Length; i++)
+            {
+                if (pressedKeys[i] == Keys.LeftShift || pressedKeys[i] == Keys.RightShift)
+                {
+                    shift = true;
+                }
+            }
+
+            bool all = false;
+
+            if (shift)
+            {
+                all = true;
+            }
+
+			Index_All(item, recipe, all);
+        }
+		public void Index_All(Item item, Recipe recipe, bool all)
+		{
+            if (all)
+            {
+                int count = 0;
+                while (uncraftItem(Main.mouseItem, recipe))
+                {
+                    count++;
+                }
+                //return count > 0;
+            }
+            else
+            {
+                uncraftItem(Main.mouseItem, recipe);
+            }
+        }
+		public void Index_UncraftItem(Item item, Recipe recipe)
+		{
+			if (item.type == recipe.createItem.type && item.stack >= recipe.createItem.stack)
+			{
+				inventoryWrapper.StartBatch();
+
+				//success = inventoryWrapper.RemoveItem(item.type, 1);
+				foreach (var required in recipe.requiredItem)
+				{
+					var reqItem = required.DeepClone();
+					var ratioBack = GetInstance<Config>().Ratio;
+					int back = (int)(reqItem.stack * ratioBack);
+					float chanceForLast = (reqItem.stack * ratioBack) - back;
+					if (random.NextDouble() <= chanceForLast)
+					{
+						back++;
+					}
+					reqItem.stack = back;
+
+					if (!inventoryWrapper.AddItem(reqItem))
+					{
+						inventoryWrapper.Restore();
+						//return false;
+					}
+				}
+
+				if (item.stack > recipe.createItem.stack)
+				{
+					item.stack -= recipe.createItem.stack;
+				}
+				else
+				{
+					item.TurnToAir();
+				}
+				//return true;
+			}
+			//return false;
+
+		}
+    }
 
 	public class PlayerInventoryWrapper
 	{
